@@ -13,6 +13,7 @@ in vec3 bitangent;
 in vec4 vBoneOut;
 in vec4 vWeightOut;
 in vec4 viewNormals;
+in vec4 fragPosLightSpace;
 
 out vec4 FragColor;
 
@@ -141,6 +142,7 @@ uniform vec3 lightDirection;
 uniform sampler2D shadowMap;
 
 uniform int selectedBoneIndex;
+uniform float zScale;
 
 uniform float elapsedTime;
 
@@ -188,7 +190,7 @@ float ShadowCalculation(vec4 fragPosLightSpace)
     projCoords = projCoords * 0.5 + 0.5;
     float closestDepth = texture(shadowMap, projCoords.xy).r;
     float currentDepth = projCoords.z;
-    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
+    float shadow = currentDepth - zScale > closestDepth  ? 1.0 : 0.0;
 
     return shadow;
 }
@@ -554,6 +556,8 @@ vec3 sm4shShader(vec4 diffuseMap, float aoMap, vec3 N){
 
     resultingColor = pow(resultingColor, vec3(1 / gamma)); // gamma correction. gamma correction also done within render passes
 
+
+    resultingColor *= mix(ShadowCalculation(fragPosLightSpace.xyzw), 1, 0.3);
     return resultingColor;
 }
 

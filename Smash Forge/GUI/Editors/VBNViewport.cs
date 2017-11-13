@@ -531,10 +531,14 @@ namespace Smash_Forge
 
         public void CalculateLightMatrix()
         {
-            Matrix4 lightModelMatrix = Matrix4.CreateRotationY(50) * Matrix4.CreateRotationX(50) * Matrix4.CreateTranslation(0, -10, -100);
-            Matrix4 lightProjection = Matrix4.CreatePerspectiveFieldOfView(Runtime.fov, glControl1.Width / (float)glControl1.Height, 1.0f, Runtime.renderDepth);
-            lightProjection = Matrix4.CreateOrthographicOffCenter(-10, 10, -10, 10, 1, 10000);
+            Matrix4 lightModelMatrix = Matrix4.CreateRotationY(cameraYRotation) * Matrix4.CreateRotationX(cameraXRotation) * Matrix4.CreateTranslation(width, -height, zoom);
+            lightModelMatrix = Matrix4.CreateRotationY(Lights.stageDiffuseLightSet[0].rotY * ((float)Math.PI / 180f)) * Matrix4.CreateRotationX(Lights.stageDiffuseLightSet[0].rotX * ((float)Math.PI / 180f)) * Matrix4.CreateTranslation(0, -10, -124);
+            Matrix4 lightProjection = Matrix4.CreatePerspectiveFieldOfView(Runtime.fov, glControl1.Width / (float)glControl1.Height, 1.0f, 10000f);
+            //lightProjection = Matrix4.CreateOrthographicOffCenter(-100, 100, -100, 100, 1, 1000);
             lightMatrix = lightModelMatrix * lightProjection;
+
+            //-0.7999999,0.255
+            //0,-10,-124
         }
 
         public void Render()
@@ -595,15 +599,14 @@ namespace Smash_Forge
                 GL.Enable(EnableCap.DepthTest);
                 GL.DepthFunc(DepthFunction.Lequal);
             }
-      
             else
                 GL.Disable(EnableCap.DepthTest);
 
             //GL.Enable(EnableCap.DepthTest);
             // GL.DepthFunc(DepthFunction.Lequal);
 
-            //if (Runtime.renderModel)
-            //    DrawModels();
+            if (Runtime.renderModel)
+                DrawModels();
             //GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
             // render gaussian blur stuff
@@ -706,8 +709,8 @@ namespace Smash_Forge
             CalculateLightMatrix();
             //GL.MatrixMode(MatrixMode.Modelview);
             //GL.LoadMatrix(ref lightMatrix);
-            //GL.Viewport(0, 0, sw, sh);
-            //GL.BindFramebuffer(FramebufferTarget.Framebuffer, sfb);
+            GL.Viewport(0, 0, sw, sh);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, sfb);
 
             // critical to clear depth buffer
             GL.Enable(EnableCap.DepthTest);
@@ -722,9 +725,9 @@ namespace Smash_Forge
             }
             
             // reset matrices and viewport for model rendering again
-            //GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
             //GL.LoadMatrix(ref mvpMatrix);
-            //GL.Viewport(glControl1.ClientRectangle); 
+            GL.Viewport(glControl1.ClientRectangle); 
         }
 
         private void DrawQuadBlur()
@@ -831,6 +834,8 @@ namespace Smash_Forge
 
             mvpMatrix = Matrix4.CreateRotationY(cameraYRotation) * Matrix4.CreateRotationX(cameraXRotation) * Matrix4.CreateTranslation(width,-height,zoom) 
                 * Matrix4.CreatePerspectiveFieldOfView(Runtime.fov, glControl1.Width / (float)glControl1.Height, 1.0f, Runtime.renderDepth);
+            Debug.WriteLine(cameraYRotation + "," + cameraXRotation);
+            Debug.WriteLine(width + "," + -height + "," + zoom);
         }
 
         public bool IsMouseOverViewport()

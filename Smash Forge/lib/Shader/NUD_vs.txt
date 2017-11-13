@@ -25,12 +25,14 @@ out vec3 fragpos;
 out vec4 vBoneOut;
 out vec4 vWeightOut;
 out vec4 viewNormals;
+out vec4 fragPosLightSpace;
 
 uniform vec4 colorSamplerUV;
 uniform vec4 colorSampler2UV;
 uniform vec4 colorSampler3UV;
 uniform vec4 normalSamplerAUV;
 uniform mat4 mvpMatrix;
+uniform mat4 lightSpaceMatrix;
 uniform uint flags;
 
 uniform float zScale;
@@ -83,7 +85,7 @@ void main()
     if(vBone.x != -1.0)
         objPos = skin(vPosition, bi);
     objectPosition = objPos.xyz;
-    objPos.z *= zScale;
+    //objPos.z *= zScale;
     objPos = mvpMatrix * vec4(objPos.xyz, 1.0);
 
     gl_Position = objPos;
@@ -109,6 +111,7 @@ void main()
 	mat4 matrixThing = transpose(inverse(mvpMatrix));
 	viewNormals = matrixThing * viewNormals;
 
+    fragPosLightSpace = lightSpaceMatrix * vec4(vPosition.xyz, 1.0);
 
 	vBoneOut = vBone;
 	vWeightOut = vWeight;
