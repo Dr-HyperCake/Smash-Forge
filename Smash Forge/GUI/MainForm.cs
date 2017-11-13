@@ -125,10 +125,10 @@ namespace Smash_Forge
             poi.fragmentShader(RenderTools.fs_Point);
             Runtime.shaders.Add("Point", poi);
 
-            Shader sha = new Shader();
-            sha.vertexShader(File.ReadAllText(MainForm.executableDir + "/lib/Shader/Shadow_vs.txt"));
-            sha.fragmentShader(File.ReadAllText(MainForm.executableDir + "/lib/Shader/Shadow_fs.txt"));
-            Runtime.shaders.Add("Shadow", sha);
+            Shader shadow = new Shader();
+            shadow.vertexShader(File.ReadAllText(MainForm.executableDir + "/lib/Shader/Shadow_vs.txt"));
+            shadow.fragmentShader(File.ReadAllText(MainForm.executableDir + "/lib/Shader/Shadow_fs.txt"));
+            Runtime.shaders.Add("Shadow", shadow);
     
             Shader texture = new Shader();           
             texture.vertexShader(File.ReadAllText(MainForm.executableDir + "/lib/Shader/Texture_vs.txt"));
@@ -2089,6 +2089,7 @@ namespace Smash_Forge
             Runtime.shaders["Texture"].SaveErrorLog("Texture");
             Runtime.shaders["Quad"].SaveErrorLog("Quad");
             Runtime.shaders["Gradient"].SaveErrorLog("Gradient");
+            Runtime.shaders["Shadow"].SaveErrorLog("Shadow");
 
             MessageBox.Show("Error logs saved to Forge directory");
         }
