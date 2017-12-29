@@ -17,7 +17,7 @@ namespace Smash_Forge.GUI.Editors
 {
     public partial class StageLighting : Form
     {
-        private DirectionalLight selectedStageLight = new DirectionalLight();
+        private DirectionalLight selectedLight = new DirectionalLight();
         private DirectionalLight selectedCharDiffuseLight = new DirectionalLight();
         private AreaLight selectedAreaLight = new AreaLight("");
 
@@ -25,68 +25,34 @@ namespace Smash_Forge.GUI.Editors
         {
             InitializeComponent();
 
-            InitCharLightListBox();
-            InitAreaLightListBox();
-            InitLightMapListBox();
+            InitLists();
 
-            for (int groupIndex = 0; groupIndex < 16; groupIndex++)
+            for (int setIndex = 0; setIndex < 17; setIndex++)
             {
-                string name = groupIndex.ToString();
-                switch (groupIndex)
-                {
-                    case 0:
-                        name += " black";
-                        break;
-                    case 1:
-                        name += " cyan";
-                        break;
-                    case 2:
-                        name += " blue";
-                        break;
-                    case 3:
-                        name += " yellow";
-                        break;
-                    case 4:
-                        name += " magenta";
-                        break;
-                    case 5:
-                        name += " green";
-                        break;
-                    default:
-                        name += "";
-                        break;
-                }
-
+                LightSet currentSet = Runtime.TargetLighting.lightSetParam.lightSets[setIndex];
                 TreeNode[] children = new TreeNode[4];
                 for (int lightIndex = 0; lightIndex < 4; lightIndex++)
                 {
-                    DirectionalLight currentLight = Lights.stageDiffuseLightSet[(groupIndex * 4) + lightIndex];
-                    string number = lightIndex.ToString();
-                    children[lightIndex] = new TreeNode(number) { Tag = currentLight };
-                    children[lightIndex].Checked = currentLight.enabled;
+                    DirectionalLight currentLight = currentSet.lights[lightIndex];
+                    children[lightIndex] = new TreeNode((lightIndex+1).ToString()) { Tag = currentLight };
+                    children[lightIndex].Checked = currentLight.enabled == 1;
                 }
+
+                string name = setIndex == 0 ? "Fighter " + setIndex.ToString() : "Stage " + (setIndex-1).ToString();
                 TreeNode parent = new TreeNode(name, children);
 
                 stageLightSetTreeView.Nodes.Add(parent);
             }
 
-
         }
 
-        private void InitLightMapListBox()
+        private void InitLists()
         {
-            foreach (LightMap lightMap in Lights.lightMaps)
-            {
-                lightmapListBox.Items.Add(lightMap);
-            }
-        }
-
-        private void InitAreaLightListBox()
-        {
-            foreach (AreaLight light in Lights.areaLights)
-            {
+            InitCharLightListBox();
+            foreach (AreaLight light in Runtime.TargetLighting.areaLights)
                 areaLightListBox.Items.Add(light);
-            }
+            foreach (LightMap lightMap in Runtime.TargetLighting.lightMaps)
+                lightmapListBox.Items.Add(lightMap);
         }
 
         private void InitCharLightListBox()
@@ -104,13 +70,8 @@ namespace Smash_Forge.GUI.Editors
                 ofd.Filter = "Param Files (.bin)|*.bin|" +
                              "All files(*.*)|*.*";
                 if (ofd.ShowDialog() == DialogResult.OK)
-                {
                     if (ofd.FileName.EndsWith("light_set_param.bin"))
-                    {
-                        Runtime.lightSetParam = new ParamFile(ofd.FileName);
-                        Lights.SetLightsFromLightSetParam(Runtime.lightSetParam);
-                    }
-                }
+                        Runtime.TargetLighting.lightSetParam = new LightSetParam(new ParamFile(ofd.FileName));
             }
         }
 
@@ -186,9 +147,10 @@ namespace Smash_Forge.GUI.Editors
 
         private void UpdateStageButtonColor()
         {
-            int red = ColorTools.ClampInt((int)(selectedStageLight.difR * 255));
-            int green = ColorTools.ClampInt((int)(selectedStageLight.difG * 255));
-            int blue = ColorTools.ClampInt((int)(selectedStageLight.difB * 255));
+            Vector3 rgb = selectedStageLight.rgb;
+            int red = ColorTools.ClampInt((int)(rgb[0] * 255));
+            int green = ColorTools.ClampInt((int)(rgb[1] * 255));
+            int blue = ColorTools.ClampInt((int)(rgb[2] * 255));
             Color stageColor = Color.FromArgb(255, red, green, blue);
             stageDifColorButton.BackColor = stageColor;
         }
@@ -210,7 +172,9 @@ namespace Smash_Forge.GUI.Editors
             GL.Viewport(areaColorGLControl.ClientRectangle);
             SetOpenGLSettings();
 
-            RenderTools.DrawQuadGradient(selectedAreaLight.skyR, selectedAreaLight.skyG, selectedAreaLight.skyB, selectedAreaLight.groundR, selectedAreaLight.groundG, selectedAreaLight.groundB);
+            Vector3 rgb_ceiling = selectedAreaLight.col_ceiling.rgb;
+            Vector3 rgb_ground = selectedAreaLight.col_ground.rgb;
+            RenderTools.DrawQuadGradient(rgb_ceiling[0], rgb_ceiling[1], rgb_ceiling[2], rgb_ground[0], rgb_ground[1], rgb_ground[2]);
 
             areaColorGLControl.SwapBuffers();
         }
@@ -547,13 +511,12 @@ namespace Smash_Forge.GUI.Editors
                 if (float.TryParse(charColor2ZTB.Text, out i))
                 {
                     charColor2ZTB.BackColor = Color.White;
-                    Lights.fresnelLight.setGroundIntensity(i);
+                    Runtime.TargetLighting.lightSetParam.fresnelLight.ground.colVal = i;
                 }
                 else
                     charColor2ZTB.BackColor = Color.Red;
 
-                RenderCharacterLightColor(new Vector3(Lights.fresnelLight.skyR, Lights.fresnelLight.skyG, Lights.fresnelLight.skyB),
-                    new Vector3(Lights.fresnelLight.groundR, Lights.fresnelLight.groundG, Lights.fresnelLight.groundB));
+                RenderCharacterLightColor(Runtime.TargetLighting.lightSetParam.fresnelLight.sky.rgb,Runtime.TargetLighting.lightSetParam.fresnelLight.ground.rgb);
             }
             else if (charLightsListBox.Items[charLightsListBox.SelectedIndex].ToString() == "Diffuse")
             {
@@ -561,13 +524,12 @@ namespace Smash_Forge.GUI.Editors
                 if (float.TryParse(charColor2ZTB.Text, out i))
                 {
                     charColor2ZTB.BackColor = Color.White;
-                    Lights.diffuseLight.setAmbIntensity(i);
+                    Runtime.TargetLighting.lightSetParam.fighterAmbientSky.colVal = i;
                 }
                 else
                     charColor2ZTB.BackColor = Color.Red;
 
-                RenderCharacterLightColor(new Vector3(Lights.diffuseLight.difR, Lights.diffuseLight.difG, Lights.diffuseLight.difB),
-                    new Vector3(Lights.diffuseLight.ambR, Lights.diffuseLight.ambG, Lights.diffuseLight.ambB));
+                RenderCharacterLightColor(Runtime.TargetLighting.lightSetParam.fighterAmbientSky.rgb,Runtime.TargetLighting.lightSetParam.fighterAmbientGround.rgb);
             }
 
             UpdateSliderFromValue(i, charColor2ZTrackBar, 5.0f);
@@ -617,21 +579,21 @@ namespace Smash_Forge.GUI.Editors
         private void UpdateCurrentAreaLightValues()
         {
             selectedAreaLight = (AreaLight)areaLightListBox.SelectedItem;
-            areaCeilRedTB.Text = selectedAreaLight.skyR + "";
-            areaCeilBlueTB.Text = selectedAreaLight.skyB + "";
-            areaCeilGreenTB.Text = selectedAreaLight.skyG + "";
-            areaGroundRedTB.Text = selectedAreaLight.groundR + "";
-            areaGroundGreenTB.Text = selectedAreaLight.groundG + "";
-            areaGroundBlueTB.Text = selectedAreaLight.groundB + "";
-            areaRotX.Text = selectedAreaLight.rotX + "";
-            areaRotY.Text = selectedAreaLight.rotY + "";
-            areaRotZ.Text = selectedAreaLight.rotZ + "";
-            areaPosXTB.Text = selectedAreaLight.positionX + "";
-            areaPosYTB.Text = selectedAreaLight.positionY + "";
-            areaPosZTB.Text = selectedAreaLight.positionZ + "";
-            areaScaleXTB.Text = selectedAreaLight.scaleX + "";
-            areaScaleYTB.Text = selectedAreaLight.scaleY + "";
-            areaScaleZTB.Text = selectedAreaLight.scaleZ + "";
+            areaCeilRedTB.Text = selectedAreaLight.col_ceiling.rgb[0] + "";
+            areaCeilGreenTB.Text = selectedAreaLight.col_ceiling.rgb[1] + "";
+            areaCeilBlueTB.Text = selectedAreaLight.col_ceiling.rgb[2] + "";
+            areaGroundRedTB.Text = selectedAreaLight.col_ground.rgb[0] + "";
+            areaGroundGreenTB.Text = selectedAreaLight.col_ground.rgb[1] + "";
+            areaGroundBlueTB.Text = selectedAreaLight.col_ground.rgb[2] + "";
+            areaPosXTB.Text = selectedAreaLight.pos.X + "";
+            areaPosYTB.Text = selectedAreaLight.pos.Y + "";
+            areaPosZTB.Text = selectedAreaLight.pos.Z + "";
+            areaScaleXTB.Text = selectedAreaLight.scale.X + "";
+            areaScaleYTB.Text = selectedAreaLight.scale.Y + "";
+            areaScaleZTB.Text = selectedAreaLight.scale.Z + "";
+            areaRotX.Text = selectedAreaLight.rot.X + "";
+            areaRotY.Text = selectedAreaLight.rot.Y + "";
+            areaRotZ.Text = selectedAreaLight.rot.Z + "";
         }
 
         private void areaCeilRedTB_TextChanged(object sender, EventArgs e)
@@ -640,14 +602,16 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaCeilRedTB.Text, out i))
             {
                 areaCeilRedTB.BackColor = Color.White;
-                selectedAreaLight.skyR = i;
+                Vector3 rgb = selectedAreaLight.col_ceiling.rgb;
+                rgb[0] = i;
+                selectedAreaLight.col_ceiling.rgb = rgb;
             }
             else
                 areaCeilRedTB.BackColor = Color.Red;
 
             RenderAreaLightColor();
 
-            UpdateSliderFromValue(selectedAreaLight.skyR, areaCeilRedTrackBar, 2.0f);
+            UpdateSliderFromValue(selectedAreaLight.col_ceiling.rgb[0], areaCeilRedTrackBar, 2.0f);
 
         }
 
@@ -657,14 +621,16 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaCeilGreenTB.Text, out i))
             {
                 areaCeilGreenTB.BackColor = Color.White;
-                selectedAreaLight.skyG = i;
+                Vector3 rgb = selectedAreaLight.col_ceiling.rgb;
+                rgb[1] = i;
+                selectedAreaLight.col_ceiling.rgb = rgb;
             }
             else
                 areaCeilGreenTB.BackColor = Color.Red;
 
             RenderAreaLightColor();
 
-            UpdateSliderFromValue(selectedAreaLight.skyG, areaCeilGreenTrackBar, 2.0f);
+            UpdateSliderFromValue(selectedAreaLight.col_ceiling.rgb[1], areaCeilGreenTrackBar, 2.0f);
 
         }
 
@@ -674,14 +640,16 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaCeilBlueTB.Text, out i))
             {
                 areaCeilBlueTB.BackColor = Color.White;
-                selectedAreaLight.skyB = i;
+                Vector3 rgb = selectedAreaLight.col_ceiling.rgb;
+                rgb[2] = i;
+                selectedAreaLight.col_ceiling.rgb = rgb;
             }
             else
                 areaCeilBlueTB.BackColor = Color.Red;
 
             RenderAreaLightColor();
 
-            UpdateSliderFromValue(selectedAreaLight.skyB, areaCeilBlueTrackBar, 2.0f);
+            UpdateSliderFromValue(selectedAreaLight.col_ceiling.rgb[2], areaCeilBlueTrackBar, 2.0f);
 
         }
 
@@ -691,14 +659,16 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaGroundRedTB.Text, out i))
             {
                 areaGroundRedTB.BackColor = Color.White;
-                selectedAreaLight.groundR = i;
+                Vector3 rgb = selectedAreaLight.col_ground.rgb;
+                rgb[0] = i;
+                selectedAreaLight.col_ground.rgb = rgb;
             }
             else
                 areaGroundRedTB.BackColor = Color.Red;
 
             RenderAreaLightColor();
 
-            UpdateSliderFromValue(selectedAreaLight.groundR, areaGroundRedTrackBar, 2.0f);
+            UpdateSliderFromValue(selectedAreaLight.col_ground.rgb[0], areaGroundRedTrackBar, 2.0f);
         }
 
         private void areaGroundGreenTB_TextChanged(object sender, EventArgs e)
@@ -707,14 +677,16 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaGroundGreenTB.Text, out i))
             {
                 areaGroundGreenTB.BackColor = Color.White;
-                selectedAreaLight.groundG = i;
+                Vector3 rgb = selectedAreaLight.col_ground.rgb;
+                rgb[1] = i;
+                selectedAreaLight.col_ground.rgb = rgb;
             }
             else
                 areaGroundGreenTB.BackColor = Color.Red;
 
             RenderAreaLightColor();
 
-            UpdateSliderFromValue(selectedAreaLight.groundG, areaGroundGreenTrackBar, 2.0f);
+            UpdateSliderFromValue(selectedAreaLight.col_ground.rgb[1], areaGroundGreenTrackBar, 2.0f);
 
         }
 
@@ -724,14 +696,16 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaGroundBlueTB.Text, out i))
             {
                 areaGroundBlueTB.BackColor = Color.White;
-                selectedAreaLight.groundB = i;
+                Vector3 rgb = selectedAreaLight.col_ground.rgb;
+                rgb[2] = i;
+                selectedAreaLight.col_ground.rgb = rgb;
             }
             else
                 areaGroundBlueTB.BackColor = Color.Red;
 
             RenderAreaLightColor();
 
-            UpdateSliderFromValue(selectedAreaLight.groundB, areaGroundBlueTrackBar, 2.0f);
+            UpdateSliderFromValue(selectedAreaLight.col_ground.rgb[2], areaGroundBlueTrackBar, 2.0f);
         }
 
         private void areaCeilRedTrackBar_Scroll(object sender, EventArgs e)
@@ -775,7 +749,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaPosXTB.Text, out i))
             {
                 areaPosXTB.BackColor = Color.White;
-                selectedAreaLight.positionX = i;
+                selectedAreaLight.pos.X = i;
             }
             else
                 areaPosXTB.BackColor = Color.Red;
@@ -787,7 +761,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaPosYTB.Text, out i))
             {
                 areaPosYTB.BackColor = Color.White;
-                selectedAreaLight.positionY = i;
+                selectedAreaLight.pos.Y = i;
             }
             else
                 areaPosYTB.BackColor = Color.Red;
@@ -799,7 +773,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaPosZTB.Text, out i))
             {
                 areaPosZTB.BackColor = Color.White;
-                selectedAreaLight.positionZ = i;
+                selectedAreaLight.pos.Z = i;
             }
             else
                 areaPosZTB.BackColor = Color.Red;
@@ -811,7 +785,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaScaleXTB.Text, out i))
             {
                 areaScaleXTB.BackColor = Color.White;
-                selectedAreaLight.scaleX = i;
+                selectedAreaLight.scale.X = i;
             }
             else
                 areaScaleXTB.BackColor = Color.Red;
@@ -823,7 +797,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaScaleYTB.Text, out i))
             {
                 areaScaleYTB.BackColor = Color.White;
-                selectedAreaLight.scaleY = i;
+                selectedAreaLight.scale.Y = i;
             }
             else
                 areaScaleYTB.BackColor = Color.Red;
@@ -835,7 +809,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaScaleZTB.Text, out i))
             {
                 areaScaleZTB.BackColor = Color.White;
-                selectedAreaLight.scaleZ = i;
+                selectedAreaLight.scale.Z = i;
             }
             else
                 areaScaleZTB.BackColor = Color.Red;
@@ -847,7 +821,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaRotX.Text, out i))
             {
                 areaRotX.BackColor = Color.White;
-                selectedAreaLight.rotX = i;
+                selectedAreaLight.rot.X = i;
             }
             else
                 areaRotX.BackColor = Color.Red;
@@ -859,7 +833,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaRotY.Text, out i))
             {
                 areaRotY.BackColor = Color.White;
-                selectedAreaLight.rotY = i;
+                selectedAreaLight.rot.Y = i;
             }
             else
                 areaRotY.BackColor = Color.Red;
@@ -871,7 +845,7 @@ namespace Smash_Forge.GUI.Editors
             if (float.TryParse(areaRotZ.Text, out i))
             {
                 areaRotZ.BackColor = Color.White;
-                selectedAreaLight.rotZ = i;
+                selectedAreaLight.rot.Z = i;
             }
             else
                 areaRotZ.BackColor = Color.Red;
@@ -923,7 +897,7 @@ namespace Smash_Forge.GUI.Editors
         private void lightSetLightListBox_ItemCheck(object sender, ItemCheckEventArgs e)
         {
             //lightSetLightListBox.SetItemChecked()
-            selectedStageLight.enabled = e.NewValue == CheckState.Checked;
+            selectedStageLight.enabled = e.NewValue == CheckState.Checked ? (uint)1 : (uint)0;
         }
 
         private void stageLightSetTreeView_AfterSelect(object sender, TreeViewEventArgs e)

@@ -38,7 +38,7 @@ namespace Smash_Forge
         public static NUD TargetNUD { get; set; }
         public static LVD TargetLVD { get; set; }
         public static PathBin TargetPath { get; set; }
-        public static LighBin TargetLigh { get; set; }
+        public static LIGH.LighBin TargetLigh { get; set; }
         public static CMR0 TargetCMR0 { get; set; }
         public static List<MTA> TargetMTA = new List<MTA>();
         public static Object LVDSelection { get; set; }
@@ -47,7 +47,7 @@ namespace Smash_Forge
         public static GUI.Editors.HitboxList hitboxList { get; set; }
         public static GUI.Editors.VariableList variableViewer { get; set; }
 
-        public static ParamFile lightSetParam = null;
+        public static Lighting TargetLighting = new Lighting();
         public static string lightSetDirectory = "";
 
         public static ParamFile stprmParam = null;

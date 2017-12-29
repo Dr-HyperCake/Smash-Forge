@@ -101,17 +101,8 @@ uniform float fresnelIntensity;
 uniform float reflectionIntensity;
 
 // character lighting
-uniform vec3 difLightColor;
-uniform vec3 ambLightColor;
-uniform vec3 difLightDirection;
-
-uniform vec3 difLight2Color;
-uniform vec3 ambLight2Color;
-uniform vec3 difLight2Direction;
-
-uniform vec3 difLight3Color;
-uniform vec3 ambLight3Color;
-uniform vec3 difLight3Direction;
+uniform vec3 ambLightSkyColor;
+uniform vec3 ambLightGroundColor;
 
 uniform vec3 fresGroundColor;
 uniform vec3 fresSkyColor;
@@ -122,29 +113,26 @@ uniform vec3 fresGroundDirection;
 uniform vec3 specLightDirection;
 uniform vec3 refLightColor;
 
-// stage light 1
-uniform int renderStageLight1;
-uniform vec3 stageLight1Color;
-uniform vec3 stageLight1Direction;
+//Lights
+uniform int renderLight1;
+uniform vec3 light1Color;
+uniform vec3 light1Direction;
 
-// stage light 2
-uniform int renderStageLight2;
-uniform vec3 stageLight2Color;
-uniform vec3 stageLight2Direction;
+uniform int renderLight2;
+uniform vec3 light2Color;
+uniform vec3 light2Direction;
 
-// stage light 3
-uniform int renderStageLight3;
-uniform vec3 stageLight3Color;
-uniform vec3 stageLight3Direction;
+uniform int renderLight3;
+uniform vec3 light3Color;
+uniform vec3 light3Direction;
 
-// stage light 4
-uniform int renderStageLight4;
-uniform vec3 stageLight4Color;
-uniform vec3 stageLight4Direction;
+uniform int renderLight4;
+uniform vec3 light4Color;
+uniform vec3 light4Direction;
 
-// light_set fog
+//Fog
 uniform int renderFog;
-uniform vec3 stageFogColor;
+uniform vec3 fogColor;
 
 uniform int colorOverride;
 
@@ -430,39 +418,40 @@ vec3 CalculateFog(vec3 inputColor)
     depth = clamp((depth / fogParams.y), 0, 1);
     float fogIntensity = mix(fogParams.z, fogParams.w, depth);
     if(renderFog == 1 && renderStageLighting == 1)
-        return mix(inputColor, pow((stageFogColor), vec3(gamma)), fogIntensity);
+        return mix(inputColor, pow((fogColor), vec3(gamma)), fogIntensity);
     else
         return inputColor;
 }
 
 vec3 CalculateLighting(vec3 N, float halfLambert, float halfLambert2, float halfLambert3)
 {
-    vec3 lighting = vec3(1);
+    if (((flags & 0x0F000000u) < 0x04000000u) || renderStageLighting != 1) //flags for no lighting
+        return vec3(1);
 
-    if (isStage == 1) // stage lighting
+    vec3 lighting = vec3(0);
+    vec3 light1 = light1Color * max((dot(N, light1Direction)), 0);
+    vec3 light2 = light2Color * max((dot(N, light2Direction)), 0);
+    vec3 light3 = light3Color * max((dot(N, light3Direction)), 0);
+    vec3 light4 = light4Color * max((dot(N, light4Direction)), 0);
+
+    if (isStage == 1) //stage lighting, i.e. pure lights
     {
         // should this be half lambert?
-        vec3 stageLight1 = stageLight1Color * max((dot(N, stageLight1Direction)), 0);
-        vec3 stageLight2 = stageLight2Color * max((dot(N, stageLight2Direction)), 0);
-        vec3 stageLight3 = stageLight3Color * max((dot(N, stageLight3Direction)), 0);
-        vec3 stageLight4 = stageLight4Color * max((dot(N, stageLight4Direction)), 0);
 
-        lighting = vec3(0);
-        lighting += (stageLight1 * renderStageLight1);
-        lighting += (stageLight2 * renderStageLight2);
-        lighting += (stageLight3 * renderStageLight3);
-        lighting += (stageLight4 * renderStageLight4);
+        lighting += (light1 * renderLight1);
+        lighting += (light2 * renderLight2);
+        lighting += (light3 * renderLight3);
+        lighting += (light4 * renderLight4);
     }
     else // gradient based character lighting
     {
-        lighting = vec3(0);
-        lighting += mix(ambLightColor * ambientIntensity, difLightColor * diffuseIntensity, halfLambert);
-        lighting += mix(ambLight2Color * ambientIntensity, difLight2Color * diffuseIntensity, halfLambert2);
-        lighting += mix(ambLight3Color * ambientIntensity, difLight3Color * diffuseIntensity, halfLambert3);
+        lighting += mix(ambLightSkyColor * ambientIntensity, light1 * diffuseIntensity * renderLight1, halfLambert);
+        lighting += mix(ambLightGroundColor * ambientIntensity, light2 * diffuseIntensity * renderLight2, halfLambert2);
+        lighting += mix(ambientIntensity, light3 * diffuseIntensity * renderLight3, halfLambert3);
+        lighting += mix(ambientIntensity, light4 * diffuseIntensity * renderLight4, halfLambert3);
     }
 
-    if (((flags & 0x0F000000u) < 0x04000000u) || renderStageLighting != 1)
-        lighting = vec3(1); // flags for "no lighting"
+    
 
     return lighting;
 }

@@ -435,18 +435,7 @@ namespace Smash_Forge
 
             GetOpenGLSystemInfo();
 
-            for(int i = 0; i < Lights.stageDiffuseLightSet.Length; i++)
-            {
-                // should properly initialize these eventually
-                Lights.stageDiffuseLightSet[i] = new DirectionalLight();
-                Lights.stageDiffuseLightSet[i].id = "Stage " + i;
-            }
-
-            for (int i = 0; i < Lights.stageFogSet.Length; i++)
-            {
-                // should properly initialize these eventually
-                Lights.stageFogSet[i] = new Vector3(0);
-            }
+            Runtime.TargetLighting = new Lighting();
 
             Debug.WriteLine(GL.GetError());
             CalculateLightSource();           
@@ -748,12 +737,10 @@ namespace Smash_Forge
             Vector3 p2 = new Vector3(0.0f, 5.0f, 0.0f);
 
             // set color to light color
-            int r = (int)(Lights.diffuseLight.difR * 255);
-            r = ColorTools.ClampInt(r);
-            int g = (int)(Lights.diffuseLight.difG * 255);
-            g = ColorTools.ClampInt(g);
-            int b = (int)(Lights.diffuseLight.difG * 255);
-            b = ColorTools.ClampInt(b);
+            Vector3 rgb = Runtime.TargetLighting.lightSetParam.lightSets[0].lights[0].rgb;
+            int r = ColorTools.ClampInt((int)(rgb[0] * 255));
+            int g = ColorTools.ClampInt((int)(rgb[1] * 255));
+            int b = ColorTools.ClampInt((int)(rgb[2] * 255));
             GL.Color4(Color.FromArgb(255, r, g, b));
 
             RenderTools.drawPyramidWireframe(p1, 5.0f, 3.0f);
@@ -867,13 +854,9 @@ namespace Smash_Forge
 
         private static void DrawAreaLightBoundingBoxes()
         {
-            foreach (AreaLight light in Lights.areaLights)
-            {
-                Color color = Color.White;
-         
-                RenderTools.drawRectangularPrismWireframe(new Vector3(light.positionX, light.positionY, light.positionZ),
-                    light.scaleX, light.scaleY, light.scaleZ, color);          
-            }
+            Color color = Color.White;
+            foreach (AreaLight light in Runtime.TargetLighting.areaLights)
+                RenderTools.drawRectangularPrismWireframe(light.pos, light.scale.X, light.scale.Y, light.scale.Z, color);
         }
 
         
@@ -935,13 +918,9 @@ namespace Smash_Forge
             GL.UseProgram(shader.programID);
 
             if (Runtime.cameraLight)
-            {
-                GL.Uniform3(shader.getAttribute("difLightDirection"), Vector3.TransformNormal(new Vector3(0f, 0f, -1f), Camera.viewportCamera.getMVPMatrix().Inverted()).Normalized());
-            }
+                GL.Uniform3(shader.getAttribute("light1Direction"), Vector3.TransformNormal(new Vector3(0f, 0f, -1f), Camera.viewportCamera.getMVPMatrix().Inverted()).Normalized());
             else
-            {
-                GL.Uniform3(shader.getAttribute("difLightDirection"), Lights.diffuseLight.direction);
-            }
+                GL.Uniform3(shader.getAttribute("light1Direction"), Runtime.TargetLighting.lightSetParam.lightSets[0].lights[0].vectorAngle);
 
 
 
@@ -951,8 +930,15 @@ namespace Smash_Forge
             shader = Runtime.shaders["DAT"];
             GL.UseProgram(shader.programID);
 
-            GL.Uniform3(shader.getAttribute("difLightColor"), Lights.diffuseLight.difR, Lights.diffuseLight.difG, Lights.diffuseLight.difB);
-            GL.Uniform3(shader.getAttribute("ambLightColor"), Lights.diffuseLight.ambR, Lights.diffuseLight.ambG, Lights.diffuseLight.ambB);
+            Vector3 rgb;
+
+            rgb = Runtime.TargetLighting.lightSetParam.fighterAmbientSky.rgb;
+            GL.Uniform3(shader.getAttribute("ambLightSkyColor"), rgb[0], rgb[1], rgb[2]);
+            rgb = Runtime.TargetLighting.lightSetParam.fighterAmbientGround.rgb;
+            GL.Uniform3(shader.getAttribute("ambLightGroundColor"), rgb[0], rgb[1], rgb[2]);
+
+            rgb = Runtime.TargetLighting.lightSetParam.lightSets[0].lights[0].rgb;
+            GL.Uniform3(shader.getAttribute("light1Color"), rgb[0], rgb[1], rgb[2]);
 
 
             #endregion

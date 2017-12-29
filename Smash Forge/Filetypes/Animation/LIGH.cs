@@ -6,7 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using OpenTK;
 
-namespace Smash_Forge
+using Smash_Forge;
+namespace LIGH
 {
     public class LighBin : FileBase
     {
@@ -21,6 +22,8 @@ namespace Smash_Forge
             frameDuration = 1;
             lightFrames = new List<LightFrame>();
             rgbProperties = new List<RgbProperty>();
+            for (int i = 0; i < 5; i++)
+                rgbProperties.Add(new RgbProperty());
         }
         public int version;
         public int frameCount;
@@ -52,10 +55,8 @@ namespace Smash_Forge
             //RGB properties
             for (int i = 0; i < 5; i++)
             {
-                RgbProperty temp = new RgbProperty();
-
-                temp.enabled = (offsets[i+1] != 0);
-                if (temp.enabled)
+                rgbProperties[i].enabled = (offsets[i+1] != 0);
+                if (rgbProperties[i].enabled)
                 {
                     f.seek(offsets[i+1]);
                     for (int j = 0; j < frameCount; j++)
@@ -63,11 +64,9 @@ namespace Smash_Forge
                         byte[] frame = new byte[3];
                         for (int k = 0; k < 3; k++)
                             frame[k] = (byte)f.readByte();
-                        temp.frames.Add(frame);
+                        rgbProperties[i].frames.Add(frame);
                     }
                 }
-
-                rgbProperties.Add(temp);
             }
 
             //Light data
@@ -80,7 +79,7 @@ namespace Smash_Forge
                 {
                     for (int k = 0; k < 4; k++)
                     {
-                        temp.lightSets[j].lights[k].enabled = f.readInt();
+                        temp.lightSets[j].lights[k].enabled = (uint)f.readInt();
                         for (int l = 0; l < 3; l++)
                             temp.lightSets[j].lights[k].angle[l] = f.readFloat();
                         temp.lightSets[j].lights[k].colorHue = f.readFloat();
@@ -154,7 +153,7 @@ namespace Smash_Forge
                 {
                     for (int k = 0; k < 4; k++)
                     {
-                        f.writeInt(lightFrames[i].lightSets[j].lights[k].enabled);
+                        f.writeInt((int)lightFrames[i].lightSets[j].lights[k].enabled);
                         for (int l = 0; l < 3; l++)
                             f.writeFloat(lightFrames[i].lightSets[j].lights[k].angle[l]);
                         f.writeFloat(lightFrames[i].lightSets[j].lights[k].colorHue);
@@ -183,7 +182,7 @@ namespace Smash_Forge
 
         public RgbProperty()
         {
-            enabled = true;
+            enabled = false;
             frames = new List<byte[]>();
         }
     }
@@ -216,7 +215,7 @@ namespace Smash_Forge
     }
     public class Light
     {
-        public int enabled;
+        public uint enabled;
         public Vector3 angle;
         public float colorHue, colorSat, colorVal;
 

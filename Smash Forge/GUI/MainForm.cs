@@ -802,9 +802,8 @@ namespace Smash_Forge
             hurtboxList.refresh();
             Runtime.Animnames.Clear();
             Runtime.clearMoveset();
-            Lights.areaLights.Clear();
-            Lights.lightMaps.Clear();
             animList.treeView1.Nodes.Clear();
+            Runtime.TargetLighting = new Lighting();
         }
 
         private void renderSettingsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1138,19 +1137,18 @@ namespace Smash_Forge
                         {
                             if (fileName.EndsWith("light_set_param.bin"))
                             {
-                                // should this always replace existing settings?
-                                Runtime.lightSetParam = new ParamFile(fileName);
-                                Lights.SetLightsFromLightSetParam(Runtime.lightSetParam);
+                                Runtime.TargetLighting = new Lighting();
+                                Runtime.TargetLighting.lightSetParam = new LightSetParam(new ParamFile(fileName));
                             }
 
                             if (fileName.EndsWith("area_light.xmb"))
                             {
-                                Lights.CreateAreaLightsFromXMB(new XMBFile(fileName));
+                                Runtime.TargetLighting.CreateAreaLightsFromXMB(new XMBFile(fileName));
                             }
 
                             if (fileName.EndsWith("lightmap.xmb"))
                             {
-                                Lights.CreateLightMapsFromXMB(new XMBFile(fileName));
+                                Runtime.TargetLighting.CreateLightMapsFromXMB(new XMBFile(fileName));
                             }
                         }
                     }
@@ -1763,7 +1761,7 @@ namespace Smash_Forge
             }
             else if (fileName.EndsWith("light.bin"))
             {
-                Runtime.TargetLigh = new LighBin(fileName);
+                Runtime.TargetLigh = new LIGH.LighBin(fileName);
             }
             else if (fileName.EndsWith(".bin"))
             {
@@ -1777,8 +1775,8 @@ namespace Smash_Forge
 
                     if (fileName.EndsWith("light_set_param.bin"))
                     {
-                        Runtime.lightSetParam = new ParamFile(fileName);
-                        Lights.SetLightsFromLightSetParam(Runtime.lightSetParam);
+                        Runtime.TargetLighting = new Lighting();
+                        Runtime.TargetLighting.lightSetParam = new LightSetParam(new ParamFile(fileName));
                     }
 
                     if (fileName.EndsWith("stprm.bin"))
@@ -1795,7 +1793,7 @@ namespace Smash_Forge
                 }
                 else if (f.readString(0,4) == "LIGH")
                 {
-                    Runtime.TargetLigh = new LighBin(fileName);
+                    Runtime.TargetLigh = new LIGH.LighBin(fileName);
                 }
                 else if (f.readString(6,4) == "LVD1")
                 {
@@ -1864,12 +1862,12 @@ namespace Smash_Forge
 
             if (fileName.EndsWith("area_light.xmb"))
             {
-                Lights.CreateAreaLightsFromXMB(new XMBFile(fileName));
+                Runtime.TargetLighting.CreateAreaLightsFromXMB(new XMBFile(fileName));
             }
 
             if (fileName.EndsWith("lightmap.xmb"))
             {
-                Lights.CreateLightMapsFromXMB(new XMBFile(fileName));
+                Runtime.TargetLighting.CreateLightMapsFromXMB(new XMBFile(fileName));
             }
 
             if (fileName.ToLower().EndsWith(".obj"))

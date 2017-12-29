@@ -12,674 +12,368 @@ using System.Globalization;
 
 namespace Smash_Forge
 {
-    public class HemisphereFresnel
+    public class ColorContainer
     {
-        // ground color
-        public float groundR = 1.0f;
-        public float groundG = 1.0f;
-        public float groundB = 1.0f;
-        public float groundHue = 0.0f;
-        public float groundSaturation = 0.0f;
-        public float groundIntensity = 1.0f;
+        //Store the color in both forms so that it only needs recalculation when changed
+        private Vector3 hsv;
+        private Vector3 rgb;
 
-        // sky color
-        public float skyR = 1.0f;
-        public float skyG = 1.0f;
-        public float skyB = 1.0f;
-        public float skyHue = 0.0f;
-        public float skySaturation = 0.0f;
-        public float skyIntensity = 1.0f;
-
-        // direction
-        public float skyAngle = 0;
-        public float groundAngle = 0;
-
-        public string name = "";
-
-        public HemisphereFresnel()
+        public Vector3 HSV
         {
-
+            get {return hsv;}
+            set
+            {
+                hsv = value;
+                float r,g,b;
+                ColorTools.HSV2RGB(hsv[0], hsv[1], hsv[2], out r, out g, out b);
+                rgb = new Vector3(r,g,b);
+            }
+        }
+        public Vector3 RGB
+        {             
+            get {return rgb;}
+            set
+            {
+                rgb = value;
+                float h,s,v;
+                ColorTools.RGB2HSV(rgb[0], rgb[1], rgb[2], out h, out s, out v);
+                hsv = new Vector3(h,s,v);
+            }
         }
 
-        public HemisphereFresnel(float groundH, float groundS, float groundV, float skyH, float skyS, float skyV, 
-            float skyAngle, float groundAngle, string name)
+        public ColorContainer()
         {
-            this.groundHue = groundH;
-            this.groundSaturation = groundS;
-            this.groundIntensity = groundV;
-            this.skyHue = skyH;
-            this.skySaturation = skyS;
-            this.skyIntensity = skyV;
-            ColorTools.HSV2RGB(skyHue, skySaturation, skyIntensity, out skyR, out skyG, out skyB);
+            hsv = new Vector3(0f,0f,1f);
+            rgb = new Vector3(1f,1f,1f);
+        }
+    }
 
-            this.skyAngle = skyAngle;
-            this.groundAngle = groundAngle;
+    public class AmbientLight
+    {
+        public float enabled; //Not sure what this actually is given that it's a float
+        public ColorContainer color;
 
-            this.name = name;
+        public AmbientLight()
+        {
+            enabled = 1f;
+            color = new ColorContainer();
+        }
+        public string ToString()
+        {
+            return $"[{enabled}],[{color.HSV.ToString()}]";
+        }
+    }
+
+    public class Hemisphere
+    {
+        public ColorContainer color;
+        public float angle;
+        public Vector3 vectorAngle
+        {             
+            get
+            {
+                Matrix4 lightRotMatrix = Matrix4.CreateFromAxisAngle(Vector3.UnitX, angle * ((float)Math.PI / 180f));
+                return Vector3.Transform(new Vector3(0f, 0f, 1f), lightRotMatrix).Normalized();
+            }
         }
 
-        public void setSkyHue(float skyHue)
+        public Hemisphere()
         {
-            this.skyHue = skyHue;
-            ColorTools.HSV2RGB(skyHue, skySaturation, skyIntensity, out skyR, out skyG, out skyB);
+            color = new ColorContainter();
+            angle = 0f;
         }
-
-        public void setSkySaturation(float skySaturation)
+        public string ToString()
         {
-            this.skySaturation = skySaturation;
-            ColorTools.HSV2RGB(skyHue, skySaturation, skyIntensity, out skyR, out skyG, out skyB);
+            return $"[{color.HSV.ToString()}],[{angle}]";
         }
+    }
 
-        public void setSkyIntensity(float skyIntensity)
+    public class HemisphereLight
+    {
+        public Hemisphere sky;
+        public Hemisphere ground;
+
+        public HemisphereLight()
         {
-            this.skyIntensity = skyIntensity;
-            ColorTools.HSV2RGB(skyHue, skySaturation, skyIntensity, out skyR, out skyG, out skyB);
+            sky = new Hemisphere();
+            ground = new Hemisphere();
         }
-
-        public void setGroundHue(float groundHue)
+        public string ToString()
         {
-            this.groundHue = groundHue;
-            ColorTools.HSV2RGB(groundHue, groundSaturation, groundIntensity, out groundR, out groundG, out groundB);
-        }
-
-        public void setGroundSaturation(float groundSaturation)
-        {
-            this.groundSaturation = groundSaturation;
-            ColorTools.HSV2RGB(groundHue, groundSaturation, groundIntensity, out groundR, out groundG, out groundB);
-        }
-
-        public void setGroundIntensity(float groundIntensity)
-        {
-            this.groundIntensity = groundIntensity;
-            ColorTools.HSV2RGB(groundHue, groundSaturation, groundIntensity, out groundR, out groundG, out groundB);
-        }
-
-        public Vector3 getSkyDirection()
-        {
-            Matrix4 lightRotMatrix = Matrix4.CreateFromAxisAngle(Vector3.UnitX, skyAngle * ((float)Math.PI / 180f));
-            Vector3 direction = Vector3.Transform(new Vector3(0f, 0f, 1f), lightRotMatrix).Normalized();
-            return direction;
-        }
-
-        public Vector3 getGroundDirection()
-        {
-            Matrix4 lightRotMatrix = Matrix4.CreateFromAxisAngle(Vector3.UnitX, groundAngle * ((float)Math.PI / 180f));
-            Vector3 direction = Vector3.Transform(new Vector3(0f, 0f, 1f), lightRotMatrix).Normalized();
-            return direction;
-        }
-
-        public override string ToString()
-        {
-            return name;
+            return $"{sky.ToString()}\n{ground.ToString()}";
         }
     }
 
     public class DirectionalLight
     {
-        public float difR = 1.0f;
-        public float difG = 1.0f;
-        public float difB = 1.0f;
-        public float difHue = 0.0f;
-        public float difSaturation = 0.0f;
-        public float difIntensity = 1.0f;
+        public uint unk;
+        public uint enabled;
+        public ColorContainer color;
+        public Vector3 eulerAngle;
+        public Vector3 vectorAngle
+        {             
+            get
+            {
+                Matrix4 lightRotMatrix = Matrix4.CreateFromAxisAngle(Vector3.UnitX, eulerAngle.X * ((float)Math.PI / 180f))
+                 * Matrix4.CreateFromAxisAngle(Vector3.UnitY, eulerAngle.Y * ((float)Math.PI / 180f))
+                 * Matrix4.CreateFromAxisAngle(Vector3.UnitZ, eulerAngle.Z * ((float)Math.PI / 180f));
 
-        public float ambR = 0.0f;
-        public float ambG = 0.0f;
-        public float ambB = 0.0f;
-        public float ambHue = 0.0f;
-        public float ambSaturation = 0.0f;
-        public float ambIntensity = 1.0f;
-
-        // in degrees (converted to radians for calcultions)
-        public float rotX = 0.0f; 
-        public float rotY = 0.0f; 
-        public float rotZ = 0.0f; 
-
-        public Vector3 direction = new Vector3(0f, 0f, 1f);
-
-        public string id = "";
-        public bool enabled = true;
-
-        public DirectionalLight(float difH, float difS, float difV, float ambH, float ambS, float ambV, float rotX, float rotY, float rotZ, string name)
-        {
-            // calculate light color
-            difHue = difH;
-            difSaturation = difS;
-            difIntensity = difV;
-            ambHue = ambH;
-            ambSaturation = ambS;
-            ambIntensity = ambV;
-            ColorTools.HSV2RGB(difHue, difSaturation, difIntensity, out difR, out difG, out difB);
-            ColorTools.HSV2RGB(ambHue, ambSaturation, ambIntensity, out ambR, out ambG, out ambB);
-
-            // calculate light vector
-            this.rotX = rotX;
-            this.rotY = rotY;
-            this.rotZ = rotZ;
-            UpdateDirection(rotX, rotY, rotZ);
-
-            this.id = name;
-        }
-
-        public DirectionalLight(float H, float S, float V, Vector3 lightDirection, string name)
-        {
-            // calculate light color
-            difHue = H;
-            difSaturation = S;
-            difIntensity = V;
-            ColorTools.HSV2RGB(difHue, difSaturation, difIntensity, out difR, out difG, out difB);
-
-            direction = lightDirection;
-
-            this.id = name;
+                return Vector3.Transform(new Vector3(0f, 0f, 1f), lightRotMatrix).Normalized();
+            }
         }
 
         public DirectionalLight()
         {
-
+            unk = 1;
+            enabled = 1;
+            color = new ColorContainer();
+            eulerAngle = new Vector3(0f,0f,0f);
         }
-
-        public void setDifHue(float hue)
+        public string ToString()
         {
-            this.difHue = hue;
-            ColorTools.HSV2RGB(hue, difSaturation, difIntensity, out difR, out difG, out difB);
-        }
-
-        public void setDifSaturation(float saturation)
-        {
-            this.difSaturation = saturation;
-            ColorTools.HSV2RGB(difHue, saturation, difIntensity, out difR, out difG, out difB);
-        }
-
-        public void setDifIntensity(float intensity)
-        {
-            this.difIntensity = intensity;
-            ColorTools.HSV2RGB(difHue, difSaturation, difIntensity, out difR, out difG, out difB);
-        }
-
-        public void setAmbHue(float hue)
-        {
-            this.ambHue = hue;
-            ColorTools.HSV2RGB(ambHue, ambSaturation, ambIntensity, out ambR, out ambG, out ambB);
-        }
-
-        public void setAmbSaturation(float saturation)
-        {
-            this.ambSaturation = saturation;
-            ColorTools.HSV2RGB(ambHue, ambSaturation, ambIntensity, out ambR, out ambG, out ambB);
-        }
-
-        public void setAmbIntensity(float intensity)
-        {
-            this.ambIntensity = intensity;
-            ColorTools.HSV2RGB(ambHue, ambSaturation, ambIntensity, out ambR, out ambG, out ambB);
-        }
-
-        public void setRotX(float rotX)
-        {
-            this.rotX = rotX;
-            UpdateDirection(rotX, rotY, rotZ);
-        }
-
-        public void setRotY(float rotY)
-        {
-            this.rotY = rotY;
-            UpdateDirection(rotX, rotY, rotZ);
-        }
-
-        public void setRotZ(float rotZ)
-        {
-            this.rotZ = rotZ;
-            UpdateDirection(rotX, rotY, rotZ);
-        }
-
-        public void setDirectionFromXYZAngles(float rotX, float rotY, float rotZ)
-        {
-            UpdateDirection(rotX, rotY, rotZ);
-        }
-
-        private void UpdateDirection(float rotX, float rotY, float rotZ)
-        {
-            // calculate light vector from 3 rotation angles
-            Matrix4 lightRotMatrix = Matrix4.CreateFromAxisAngle(Vector3.UnitX, rotX * ((float)Math.PI / 180f))
-             * Matrix4.CreateFromAxisAngle(Vector3.UnitY, rotY * ((float)Math.PI / 180f))
-             * Matrix4.CreateFromAxisAngle(Vector3.UnitZ, rotZ * ((float)Math.PI / 180f));
-
-            direction = Vector3.Transform(new Vector3(0f, 0f, 1f), lightRotMatrix).Normalized();
-        }
-
-        public void setColorFromHSV(float H, float S, float V)
-        {
-            // calculate light color
-            difHue = H;
-            difSaturation = S;
-            difIntensity = V;
-            ColorTools.HSV2RGB(difHue, difSaturation, difIntensity, out difR, out difG, out difB);
-        }
-
-        public override string ToString()
-        {
-            return id;
+            return $"[{enabled}],[{eulerAngle}],[{color.HSV.ToString()}]";
         }
     }
 
-    public class AreaLight : DirectionalLight
+    public class Fog
     {
-        // ambient color
-        public float groundR = 1.0f;
-        public float groundG = 1.0f;
-        public float groundB = 1.0f;
+        public ColorContainer color;
 
-        // diffuse color
-        public float skyR = 1.0f;
-        public float skyG = 1.0f;
-        public float skyB = 1.0f;
-
-        // size
-        public float scaleX = 1.0f;
-        public float scaleY = 1.0f;
-        public float scaleZ = 1.0f;
-
-        // position of the center of the region
-        public float positionX = 0.0f;
-        public float positionY = 0.0f;
-        public float positionZ = 0.0f;
-
-        // How should "non directional" area lights work?
-        public bool nonDirectional = false;
-
-        public AreaLight(string areaLightID)
+        public Fog()
         {
-            id = areaLightID;
+            color = new ColorContainer();
         }
-
-        public AreaLight(string areaLightID, Vector3 groundColor, Vector3 skyColor, Vector3 position, Vector3 scale, Vector3 direction)
+        public string ToString()
         {
-            id = areaLightID;
-            groundR = groundColor.X;
-            groundG = groundColor.Y;
-            groundB = groundColor.Z;
-
-            skyR = skyColor.X;
-            skyG = skyColor.Y;
-            skyB = skyColor.Z;
+            return $"[{color.HSV.ToString()}]";
         }
+    }
 
-        public AreaLight(string areaLightID, Vector3 groundColor, Vector3 skyColor, Vector3 position, Vector3 scale, float rotX, float rotY, float rotZ)
+    public class LightSet
+    {
+        public List<DirectionalLight> lights;
+        public Fog fog;
+
+        public LightSet()
         {
-            id = areaLightID;
+            lights = new List<DirectionalLight>();
+            for (int i = 0; i < 4; i++)
+                lights.Add(new DirectionalLight());
+            fog = new Fog();
+        }
+    }
 
-            positionX = position.X;
-            positionY = position.Y;
-            positionZ = position.Z;
+    public class LightSetParam
+    {
+        public HemisphereLight fresnelLight;
+        public AmbientLight fighterAmbientSky; //I'm guessing that these two are sky and ground; need to put them together if it's the case
+        public AmbientLight fighterAmbientGround;
+        public DirectionalLight specularLight; //Need to know what this actually is
+        public List<LightSet> lightSets;
 
-            scaleX = scale.X;
-            scaleY = scale.Y;
-            scaleZ = scale.Z;
+        public LightSetParam()
+        {
+            fresnelLight = new HemisphereLight();
+            fighterAmbientSky = new AmbientLight();
+            fighterAmbientGround = new AmbientLight();
+            specularLight = new DirectionalLight();
+            lightSets = new List<LightSet>();
+            for (int i = 0; i < 17; i++)
+                lightSets.Add(new LightSet());
+        }
+        public LightSetParam(ParamFile lightSetParamFile) : this()
+        {
+            //Fresnel
+            fresnelLight.sky.color.HSV[0] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 8);
+            fresnelLight.sky.color.HSV[1] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 9);
+            fresnelLight.sky.color.HSV[2] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 10);
 
-            skyR = skyColor.X;
-            skyG = skyColor.Y;
-            skyB = skyColor.Z;
+            fresnelLight.ground.color.HSV[0] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 11);
+            fresnelLight.ground.color.HSV[1] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 12);
+            fresnelLight.ground.color.HSV[2] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 13);
 
-            groundR = groundColor.X;
-            groundB = groundColor.Y;
-            groundG = groundColor.Z;
+            fresnelLight.sky.angle = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 14);
+            fresnelLight.ground.angle = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 15);
+
+            //Ambients
+            fighterAmbientSky.enabled = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 28);
+            fighterAmbientSky.color.HSV[0] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 29);
+            fighterAmbientSky.color.HSV[1] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 30);
+            fighterAmbientSky.color.HSV[2] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 31);
+
+            fighterAmbientGround.enabled = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 32);
+            fighterAmbientGround.color.HSV[0] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 33);
+            fighterAmbientGround.color.HSV[1] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 34);
+            fighterAmbientGround.color.HSV[2] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 0, 0, 35);
+
+            //Lights and fog
+            for (int i = 0; i < 17; i++)
+            {
+                for (int j = 0; j < 4; j++)
+                {
+                    lightSets[i].lights[j].unk = (uint)RenderTools.GetValueFromParamFile(lightSetParamFile, 1, (i*4)+j, 0);
+                    lightSets[i].lights[j].enabled = (uint)RenderTools.GetValueFromParamFile(lightSetParamFile, 1, (i*4)+j, 1);
+
+                    lightSets[i].lights[j].color.HSV[0] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 1, (i*4)+j, 2);
+                    lightSets[i].lights[j].color.HSV[1] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 1, (i*4)+j, 3);
+                    lightSets[i].lights[j].color.HSV[2] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 1, (i*4)+j, 4);
+
+                    lightSets[i].lights[j].eulerAngle = new Vector3();
+                    lightSets[i].lights[j].eulerAngle.X = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 1, (i*4)+j, 5);
+                    lightSets[i].lights[j].eulerAngle.Y = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 1, (i*4)+j, 6);
+                    lightSets[i].lights[j].eulerAngle.Z = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 1, (i*4)+j, 7);
+                }
+                lightSets[i].fog.color.HSV[0] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 2, i, 0);
+                lightSets[i].fog.color.HSV[1] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 2, i, 1);
+                lightSets[i].fog.color.HSV[2] = (float)RenderTools.GetValueFromParamFile(lightSetParamFile, 2, i, 2);
+            }
+        }
+    }
+
+    public class AreaLight
+    {
+        public string id;
+        public Vector3 pos;
+        public Vector3 scale;
+        public Vector3 rot;
+        public ColorContainer col_ceiling;
+        public ColorContainer col_ground;
+
+        public AreaLight()
+        {
+            id = "";
+            pos = new Vector3(0f);
+            scale = new Vector3(1f);
+            rot = new Vector3(0f);
+            col_ceiling = new ColorContainer();
+            col_ground = new ColorContainer();
+        }
+        public AreaLight(XMBEntry entry) : this()
+        {
+            for (int i = 0; i < entry.Expressions.Count; i++)
+            {
+                string expression = entry.Expressions[i];
+
+                string[] sections = expression.Split('=');
+                string name = sections[0];
+                string[] values = sections[1].Split(',');
+
+                if (name.Contains("id"))
+                {
+                    id = values[0];
+                }
+                else if (name.Contains("pos") || name.Contains("scale") || name.Contains("rot") || name.Contains("col_ceiling") || name.Contains("col_ground"))
+                {
+                    float x,y,z;
+                    float.TryParse(values[0], out x);
+                    float.TryParse(values[1], out y);
+                    float.TryParse(values[2], out z);
+
+                    if (name.Contains("pos"))
+                        pos = new Vector3(x,y,z);
+                    else if (name.Contains("scale"))
+                        scale = new Vector3(x,y,z);
+                    else if (name.Contains("rot"))
+                        rot = new Vector3(x,y,z);
+                    else if (name.Contains("col_ceiling"))
+                        col_ceiling.rgb = new Vector3(x,y,z);
+                    else if (name.Contains("col_ground"))
+                        col_ground.rgb = new Vector3(x,y,z);
+                }
+            }
         }
     }
 
     public class LightMap
     {
-        private float scaleX = 1;
-        private float scaleY = 1;
-        private float scaleZ = 1;
-
-        private int texture_index = 0x10080000;
-        private int texture_addr = 0;
-
-        private float posX = 0;
-        private float posY = 0;
-        private float posZ = 0;
-
-        private float rotX = 0;
-        private float rotY = 0;
-        private float rotZ = 0;
-
-        private string id = "";
+        public string id;
+        public Vector3 pos;
+        public Vector3 scale;
+        public Vector3 rot;
+        public uint texture_index;
+        public uint texture_addr;
 
         public LightMap()
         {
-
+            id = "";
+            pos = new Vector3(0f);
+            scale = new Vector3(1f);
+            rot = new Vector3(0f);
+            texture_index = 0x10080000;
+            texture_addr = 0;
         }
-
-        public LightMap(Vector3 scale, int texture_index, int texture_addr, Vector3 pos, float rotX, float rotY, float rotZ, string id)
+        public LightMap(XMBEntry entry) : this()
         {
-            this.scaleX = scale.X;
-            this.scaleY = scale.Y;
-            this.scaleZ = scale.Z;
-            this.texture_addr = texture_addr;
-            this.texture_index = texture_index;
-            this.posX = pos.X;
-            this.posY = pos.Y;
-            this.posZ = pos.Z;
-            this.rotX = rotX;
-            this.rotY = rotY;
-            this.rotZ = rotZ;
-            this.id = id;
-        }
+            for (int i = 0; i < entry.Expressions.Count; i++)
+            {
+                string expression = entry.Expressions[i];
 
-        public override string ToString()
-        {
-            return id;
+                string[] sections = expression.Split('=');
+                string name = sections[0];
+                string[] values = sections[1].Split(',');
+
+                if (name.Contains("id"))
+                {
+                    id = values[0];
+                }
+                else if (name.Contains("texture_index"))
+                {
+                    string index = values[0].Trim();
+                    if (index.StartsWith("0x"))
+                        index = index.Substring(2);
+                    uint.TryParse(index, NumberStyles.HexNumber, null, out texture_index);
+                }
+                else if (name.Contains("texture_addr"))
+                {
+                    uint.TryParse(values[0], out texture_addr);
+                }
+                else if (name.Contains("pos") || name.Contains("scale") || name.Contains("rot"))
+                {
+                    float x,y,z;
+                    float.TryParse(values[0], out x);
+                    float.TryParse(values[1], out y);
+                    float.TryParse(values[2], out z);
+
+                    if (name.Contains("pos"))
+                        pos = new Vector3(x,y,z);
+                    else if (name.Contains("scale"))
+                        scale = new Vector3(x,y,z);
+                    else if (name.Contains("rot"))
+                        rot = new Vector3(x,y,z);
+                }
+            }
         }
     }
 
 
-    class Lights
+    public class Lighting
     {
-        // character diffuse from light_set_param.bin
-        public static DirectionalLight diffuseLight = new DirectionalLight(0, 0, 1, 0, 0, 0.75f, 0, 0, 0, "Diffuse");
-        public static DirectionalLight diffuseLight2 = new DirectionalLight(0, 0, 1, 0, 0, 0.75f, 0, 0, 0, "Diffuse2");
-        public static DirectionalLight diffuseLight3 = new DirectionalLight(0, 0, 1, 0, 0, 0.75f, 0, 0, 0, "Diffuse3");
+        public LightSetParam lightSetParam;
+        public List<AreaLight> areaLights;
+        public List<LightMap> lightMaps;
 
-        // still not sure what controls this yet
-        public static DirectionalLight specularLight = new DirectionalLight();
-
-        // hemisphere fresnel from light_set_param.bin
-        public static HemisphereFresnel fresnelLight = new HemisphereFresnel(0, 0, 0, 0, 0, 1, 0, 0, "Fresnel");
-
-        // used for rendering
-        public static DirectionalLight stageLight1 = new DirectionalLight();
-        public static DirectionalLight stageLight2 = new DirectionalLight();
-        public static DirectionalLight stageLight3 = new DirectionalLight();
-        public static DirectionalLight stageLight4 = new DirectionalLight();
-
-        // stage diffuse from light_set_param.bin
-        public static DirectionalLight[] stageDiffuseLightSet = new DirectionalLight[64];
-        public static Vector3[] stageFogSet = new Vector3[16];
-
-        // area_light.xmb
-        public static List<AreaLight> areaLights = new List<AreaLight>();
-
-        // light_map.xmb
-        public static List<LightMap> lightMaps = new List<LightMap>();
-
-        public static void SetLightsFromLightSetParam(ParamFile lightSet)
+        public Lighting()
         {
-            if (lightSet != null)
-            {
-                // stage diffuse
-                for (int i = 0; i < stageDiffuseLightSet.Length; i++)
-                {
-                    stageDiffuseLightSet[i] = CreateDirectionalLightFromLightSet(lightSet, 4 + i, "Stage " + i);
-                }
-
-                // stage fog
-                for (int i = 0; i < stageFogSet.Length; i++)
-                {
-                    stageFogSet[i] = CreateFogColorFromFogSet(lightSet, i);
-                }
-
-                // character diffuse
-                {
-                    float difHue = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 29);
-                    float difSaturation = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 30);
-                    float difIntensity = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 31);
-
-                    float ambHue = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 33);
-                    float ambSaturation = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 34);
-                    float ambIntensity = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 35);
-
-                    float rotX = (float)RenderTools.GetValueFromParamFile(lightSet, 1, 4, 5);
-                    float rotY = (float)RenderTools.GetValueFromParamFile(lightSet, 1, 4, 6);
-                    float rotZ = (float)RenderTools.GetValueFromParamFile(lightSet, 1, 4, 7);
-
-                    diffuseLight = new DirectionalLight(difHue, difSaturation, difIntensity, ambHue, ambSaturation, ambIntensity, 0, 0, 0, "Diffuse");
-                }
-
-                // character diffuse 2
-                {
-                    diffuseLight2 = CreateDirectionalLightFromLightSet(lightSet, 0, "Diffuse2");
-                }
-
-                // character diffuse 3
-                {
-                    diffuseLight3 = CreateDirectionalLightFromLightSet(lightSet, 1, "Diffuse3");
-                }
-
-                // fresnel lighting
-                {
-                    float hueSky = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 8);
-                    float satSky = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 9);
-                    float intensitySky = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 10);
-
-                    float hueGround = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 11);
-                    float satGround = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 12);
-                    float intensityGround = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 13);
-
-                    float skyAngle = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 14);
-                    float groundAngle = (float)RenderTools.GetValueFromParamFile(lightSet, 0, 0, 15);
-
-                    fresnelLight = new HemisphereFresnel(hueGround, satGround, intensityGround, hueSky, satSky, intensitySky, 
-                        skyAngle, groundAngle, "Fresnel");
-                }
-            }
+            lightSetParam = new LightSetParam();
+            areaLights = new List<AreaLight>();
+            lightMaps = new List<LightMap>();
         }
 
-        private static Vector3 CreateFogColorFromFogSet(ParamFile lightSet, int i)
+        public void CreateAreaLightsFromXMB(XMBFile xmb)
         {
-            float hue = (float)RenderTools.GetValueFromParamFile(lightSet, 2, 1 + i, 0);
-            float saturation = (float)RenderTools.GetValueFromParamFile(lightSet, 2, 1 + i, 1);
-            float value = (float)RenderTools.GetValueFromParamFile(lightSet, 2, 1 + i, 2);
-            float fogR = 0.0f, fogB = 0.0f, fogG = 0.0f;
-            ColorTools.HSV2RGB(hue, saturation, value, out fogR, out fogG, out fogB);
-            Vector3 color = new Vector3(fogR, fogG, fogB);
-            return color;
+            if (xmb == null) return;
+
+            foreach (XMBEntry entry in xmb.Entries)
+                foreach (XMBEntry lightEntry in entry.Children)
+                    areaLights.Add(new AreaLight(lightEntry));
         }
-
-        private static DirectionalLight CreateDirectionalLightFromLightSet(ParamFile lightSet, int lightNumber, string name)
+        public void CreateLightMapsFromXMB(XMBFile xmb)
         {
-            bool enabled = (uint)RenderTools.GetValueFromParamFile(lightSet, 1, lightNumber, 1) == 1;
-            float hue = (float)RenderTools.GetValueFromParamFile(lightSet, 1, lightNumber, 2);
-            float saturation = (float)RenderTools.GetValueFromParamFile(lightSet, 1, lightNumber, 3);
-            float value = (float)RenderTools.GetValueFromParamFile(lightSet, 1, lightNumber, 4);
+            if (xmb == null) return;
 
-            float rotX = (float)RenderTools.GetValueFromParamFile(lightSet, 1, lightNumber, 5);
-            float rotY = (float)RenderTools.GetValueFromParamFile(lightSet, 1, lightNumber, 6);
-            float rotZ = (float)RenderTools.GetValueFromParamFile(lightSet, 1, lightNumber, 7);
-
-            DirectionalLight newLight = new DirectionalLight(hue, saturation, value, 0, 0, 0, rotX, rotY, rotZ, name);
-            newLight.enabled = enabled; // doesn't render properly for some stages
-            return newLight;
-        }
-
-        public static void CreateAreaLightsFromXMB(XMBFile xmb)
-        {
-            if (xmb != null)
-            {
-                foreach (XMBEntry entry in xmb.Entries)
-                {
-                    if (entry.Children.Count > 0)
-                    {
-                        foreach (XMBEntry lightEntry in entry.Children)
-                        {
-                            AreaLight newAreaLight = CreateAreaLightFromXMBEntry(lightEntry);
-                            areaLights.Add(newAreaLight);
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void CreateLightMapsFromXMB(XMBFile xmb)
-        {
-            if (xmb != null)
-            {
-                foreach (XMBEntry entry in xmb.Entries)
-                {
-                    if (entry.Children.Count > 0)
-                    {
-                        foreach (XMBEntry lightMapEntry in entry.Children)
-                        {
-                            LightMap newLightMap = CreateLightMapFromXMBEntry(lightMapEntry);
-                            lightMaps.Add(newLightMap);
-                        }
-                    }
-                }
-            }
-        }
-
-        private static LightMap CreateLightMapFromXMBEntry(XMBEntry entry)
-        {
-            float scaleX = 1;
-            float scaleY = 1;
-            float scaleZ = 1;
-
-            int texture_index = 0x10080000;
-            int texture_addr = 0;
-
-            float posX = 0;
-            float posY = 0;
-            float posZ = 0;
-
-            float rotX = 0;
-            float rotY = 0;
-            float rotZ = 0;
-
-            string id = "";
-
-            for (int i = 0; i < entry.Expressions.Count; i++)
-            {
-                string expression = entry.Expressions[i];
-
-                string[] sections = expression.Split('=');
-                string name = sections[0];
-                string[] values = sections[1].Split(',');
-
-                if (name.Contains("id"))
-                {
-                    id = values[0];
-                }
-                if (name.Contains("texture_index"))
-                {
-                    // remove 0x from the beginning
-                    string index = values[0].Trim();
-                    if (index.StartsWith("0x"))
-                        index = index.Substring(2);
-
-                    int.TryParse(index, NumberStyles.HexNumber, null, out texture_index);
-                }
-                if (name.Contains("texture_addr"))
-                {
-                    int.TryParse(values[0], out texture_addr);
-                }
-                if (name.Contains("pos"))
-                {
-                    float.TryParse(values[0], out posX);
-                    float.TryParse(values[1], out posY);
-                    float.TryParse(values[2], out posZ);
-                }
-                if (name.Contains("scale"))
-                {
-                    float.TryParse(values[0], out scaleX);
-                    float.TryParse(values[1], out scaleY);
-                    float.TryParse(values[2], out scaleZ);
-                }
-                if (name.Contains("rot"))
-                {
-                    float.TryParse(values[0], out rotX);
-                    float.TryParse(values[1], out rotY);
-                    float.TryParse(values[2], out rotZ);
-                }
-            }
-
-            Debug.WriteLine(id);
-            Debug.WriteLine(texture_index);
-            Debug.WriteLine(rotX);
-            Debug.WriteLine(rotY);
-            Debug.WriteLine(rotZ);
-            Debug.WriteLine(scaleX);
-            Debug.WriteLine(scaleY);
-            Debug.WriteLine(scaleZ);
-            Debug.WriteLine(posX);
-            Debug.WriteLine(posY);
-            Debug.WriteLine(posZ);
-
-            Vector3 position = new Vector3(posX, posY, posZ);
-            Vector3 scale = new Vector3(scaleX, scaleY, scaleZ);
-
-            return new LightMap(new Vector3(scaleX, scaleY, scaleZ), texture_index, texture_addr, new Vector3(posX, posY, posZ), rotX, rotY, rotZ, id);
-        }
-
-
-        private static AreaLight CreateAreaLightFromXMBEntry(XMBEntry entry)
-        {
-            string id = "";
-            float posX = 0;
-            float posY = 0;
-            float posZ = 0;
-            float scaleX = 0;
-            float scaleY = 0;
-            float scaleZ = 0;
-            float groundR = 0;
-            float groundG = 0;
-            float groundB = 0;
-            float skyR = 0;
-            float skyG = 0;
-            float skyB = 0;
-            float rotX = 0;
-            float rotY = 0;
-            float rotZ = 0;
-
-            for (int i = 0; i < entry.Expressions.Count; i++)
-            {
-                string expression = entry.Expressions[i];
-
-                string[] sections = expression.Split('=');
-                string name = sections[0];
-                string[] values = sections[1].Split(',');
-
-                if (name.Contains("id"))
-                {
-                    id = values[0];
-                }
-                if (name.Contains("pos"))
-                {
-                    float.TryParse(values[0], out posX);
-                    float.TryParse(values[1], out posY);
-                    float.TryParse(values[2], out posZ);
-                }
-                if (name.Contains("scale"))
-                {
-                    float.TryParse(values[0], out scaleX);
-                    float.TryParse(values[1], out scaleY);
-                    float.TryParse(values[2], out scaleZ);
-                }
-                if (name.Contains("col_ground"))
-                {
-                    float.TryParse(values[0], out groundR);
-                    float.TryParse(values[1], out groundG);
-                    float.TryParse(values[2], out groundB);
-                }
-                if (name.Contains("col_ceiling"))
-                {
-                    float.TryParse(values[0], out skyR);
-                    float.TryParse(values[1], out skyG);
-                    float.TryParse(values[2], out skyB);
-                }
-                if (name.Contains("rot"))
-                {
-                    float.TryParse(values[0], out rotX);
-                    float.TryParse(values[1], out rotY);
-                    float.TryParse(values[2], out rotZ);
-                }
-            }
-
-            Vector3 groundColor = new Vector3(groundR, groundG, groundB);
-            Vector3 skyColor = new Vector3(skyR, skyG, skyB);
-            Vector3 position = new Vector3(posX, posY, posZ);
-            Vector3 scale = new Vector3(scaleX, scaleY, scaleZ);
-
-            return new AreaLight(id, groundColor, skyColor, position, scale, rotX, rotY, rotZ);
+            foreach (XMBEntry entry in xmb.Entries)
+                foreach (XMBEntry lightMapEntry in entry.Children)
+                    lightMaps.Add(new LightMap(lightMapEntry));
         }
     }
 }

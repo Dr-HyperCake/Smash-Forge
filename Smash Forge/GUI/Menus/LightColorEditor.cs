@@ -25,9 +25,8 @@ namespace Smash_Forge.GUI.Menus
         public LightColorEditor(DirectionalLight light)
         {
             InitializeComponent();
-            R = light.difR;
-            G = light.difG;
-            B = light.difB;
+            OpenTK.Vector3 rgb = light.rgb;
+            R = rgb[0]; G = rgb[1]; B = rgb[2];
             ColorTools.RGB2HSV(R, G, B, out hue, out saturation, out value);
 
             colorTempTB.Text = colorTemp + "";
